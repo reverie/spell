@@ -3,8 +3,10 @@ defmodule Spell.Room do
   Starts a room with the given name.
   """
 
-  def start_link(room_id) do
-    Agent.start_link(fn -> [] end, name: room_id)
+  defstruct room_id: nil, name: nil, exits: nil
+
+  def start_link(room) do
+    Agent.start_link(fn -> room end, name: room.room_id)
   end
 
   def get(room_id) do

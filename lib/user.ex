@@ -2,11 +2,11 @@ defmodule Spell.User do
   @doc """
   Starts a user with the given ID.
   """
+
   defstruct user_id: nil, name: nil, current_room: nil
 
-  def start_link(user_id) do
-    user = %Spell.User{user_id: user_id, name: "Wompus", current_room: nil}
-    Agent.start_link(fn -> user end, name: user_id)
+  def start_link(user) do
+    Agent.start_link(fn -> user end, name: user.user_id)
   end
 
   def get_state(user_id) do

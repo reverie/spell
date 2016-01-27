@@ -6,11 +6,34 @@ defmodule Spell do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    upa_agent = %Spell.User{
+                  user_id: :upa_agent,
+                  name: "Wompus",
+                  current_room: nil
+                }
+
+    treehouse = %Spell.Room{
+                  room_id: :treehouse,
+                  name: "Treehouse",
+                  exits: %{
+                    :d => :dungeon
+                  }
+                }
+
+    dungeon = %Spell.Room{
+                  room_id: :dungeon,
+                  name: "Ye Olde Dungeon",
+                  exits: %{
+                    :u => :treehouse
+                  }
+                }
+
 
     children = [
       # Define workers and child supervisors to be supervised
-      worker(Spell.Room, [:treehouse]),
-      worker(Spell.User, [:upa_agent]),
+      worker(Spell.User, [upa_agent]),
+      worker(Spell.Room, [treehouse]),
+      worker(Spell.Room, [dungeon]),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
