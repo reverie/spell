@@ -28,13 +28,12 @@ defmodule Spell do
                   }
                 }
 
+    users = [upa_agent]
+    rooms = [treehouse, dungeon]
 
-    children = [
-      # Define workers and child supervisors to be supervised
-      worker(Spell.User, [upa_agent]),
-      worker(Spell.Room, [treehouse]),
-      worker(Spell.Room, [dungeon]),
-    ]
+    user_children = Enum.map(users, fn u -> worker(Spell.User, [u], [id: u.user_id]) end)
+    room_children = Enum.map(rooms, fn r -> worker(Spell.Room, [r], [id: r.room_id]) end)
+    children = Enum.concat([user_children, room_children])
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
