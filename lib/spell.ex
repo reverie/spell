@@ -52,14 +52,17 @@ defmodule Spell do
     receive do
       {sender, :connect, username} ->
         Process.link(sender)
+        IO.puts(Atom.to_string(username) <> " joined!")
         broadcast({:info, Atom.to_string(username) <> " joined the chat"}, clients)
         loop([{username, sender} | clients])
       {sender, :broadcast, msg} ->
         broadcast({:new_msg, find(sender, clients), msg}, clients)
         loop(clients)
       {:EXIT, pid, _} ->
-        broadcast({:info, find(pid, clients) <> " left the chat."}, clients)
+        broadcast({:info, Atom.to_string(find(pid, clients)) <> " left the chat."}, clients)
+        IO.puts("caught an exit")
         loop(clients |> Enum.filter(fn {_, rec} -> rec != pid end))
+      _ -> raise "Unexpected message in Spell receive loop"
     end
     #IO.puts ("User has: " <> to_string(Spell.User.get_state(:upa_agent)))
     #action = IO.gets "Whatcha gonna do about it? >"
@@ -69,7 +72,7 @@ defmodule Spell do
   end
 
   defp broadcast(msg, clients) do
-    Enum.each clients, fn {_, rec} -> send rec, msg end
+    Enum.each clients, fn {_, receiver_pid} -> send(receiver_pid, msg) end
   end
 
   defp find(sender, [{u, p} | _]) when p == sender, do: u
