@@ -4,8 +4,13 @@ defmodule Spell do
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
   # for more information on OTP Applications
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
+    pid = spawn(Spell, :init, [])
+    {:ok, pid}
+  end
 
+  def init do
+    import Supervisor.Spec, warn: false
+    Process.flag(:trap_exit, true)
     upa_agent = %Spell.User{
                   user_id: :upa_agent,
                   name: "Wompus",
@@ -28,9 +33,10 @@ defmodule Spell do
                   }
                 }
 
+    # TODO: room called Jeffrey
+
     users = [upa_agent]
     rooms = [treehouse, dungeon]
-
     user_children = Enum.map(users, fn u -> worker(Spell.User, [u], [id: u.user_id]) end)
     room_children = Enum.map(rooms, fn r -> worker(Spell.Room, [r], [id: r.room_id]) end)
     children = Enum.concat([user_children, room_children])
@@ -39,11 +45,33 @@ defmodule Spell do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Spell.Supervisor]
     result = Supervisor.start_link(children, opts)
-
-    IO.puts ("User has: " <> to_string(Spell.User.get_state(:upa_agent)))
-    action = IO.gets "Whatcha gonna do about it? >"
-    Spell.User.set_state(:upa_agent, action)
-    IO.puts ("User NOW has: " <> to_string(Spell.User.get_state(:upa_agent)))
-    result
+    loop([])
   end
+
+  def loop(clients) do
+    receive do
+      {sender, :connect, username} ->
+        Process.link(sender)
+        broadcast({:info, Atom.to_string(username) <> " joined the chat"}, clients)
+        loop([{username, sender} | clients])
+      {sender, :broadcast, msg} ->
+        broadcast({:new_msg, find(sender, clients), msg}, clients)
+        loop(clients)
+      {:EXIT, pid, _} ->
+        broadcast({:info, find(pid, clients) <> " left the chat."}, clients)
+        loop(clients |> Enum.filter(fn {_, rec} -> rec != pid end))
+    end
+    #IO.puts ("User has: " <> to_string(Spell.User.get_state(:upa_agent)))
+    #action = IO.gets "Whatcha gonna do about it? >"
+    #Spell.User.set_state(:upa_agent, action)
+    #IO.puts ("User NOW has: " <> to_string(Spell.User.get_state(:upa_agent)))
+    #result
+  end
+
+  defp broadcast(msg, clients) do
+    Enum.each clients, fn {_, rec} -> send rec, msg end
+  end
+
+  defp find(sender, [{u, p} | _]) when p == sender, do: u
+  defp find(sender, [_ | t]), do: find(sender, t)
 end
